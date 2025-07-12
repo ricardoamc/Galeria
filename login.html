@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alma Marina</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      background-color: #fcefdc;
+    }
+
+    .wave-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, #dff6f5 0%, #fcefdc 100%);
+      z-index: -2;
+      animation: waveMove 20s ease-in-out infinite alternate;
+    }
+
+    .wave-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200%;
+      height: 200%;
+      background: repeating-radial-gradient(
+        circle at 50% 50%,
+        rgba(60, 166, 166, 0.1) 0px,
+        rgba(60, 166, 166, 0.1) 3px,
+        transparent 5px,
+        transparent 10px
+      );
+      z-index: -1;
+      animation: waveOverlay 12s linear infinite;
+    }
+
+    @keyframes waveMove {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-5%, -5%); }
+    }
+
+    @keyframes waveOverlay {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-10%); }
+    }
+
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 320px;
+      padding: 20px;
+      z-index: 1;
+    }
+
+    .logo-img {
+      width: 95vw;
+      max-width: 600px;
+      height: auto;
+      margin-bottom: 30px;
+    }
+
+    .logo-button {
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .login-button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      width: 100px;
+      height: 100px;
+      padding: 0;
+      display: inline-block;
+    }
+
+    .cup {
+      width: 100px;
+      height: 60px;
+      background-color: #3ca6a6;
+      border-radius: 0 0 30px 30px;
+      position: relative;
+      margin: 0 auto;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .cup::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      right: -20px;
+      width: 25px;
+      height: 35px;
+      border: 5px solid #3ca6a6;
+      border-left: none;
+      border-radius: 0 20px 20px 0;
+    }
+
+    .steam {
+      width: 8px;
+      height: 30px;
+      border-left: 2px solid #bbb;
+      border-radius: 50%;
+      position: absolute;
+      top: -35px;
+      left: 25px;
+      animation: steam-rise 2s infinite ease-in-out;
+    }
+
+    .steam:nth-child(2) {
+      left: 45px;
+      animation-delay: 0.6s;
+    }
+
+    @keyframes steam-rise {
+      0% { transform: translateY(0) scaleY(1); opacity: 0.7; }
+      100% { transform: translateY(-20px) scaleY(1.2); opacity: 0; }
+    }
+
+    .arrow-inside {
+      width: 0;
+      height: 0;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 24px solid #4CAF50;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      animation: arrowColorPulse 3s infinite ease-in-out;
+    }
+
+    @keyframes arrowColorPulse {
+      0% { border-left-color: #4CAF50; }
+      50% { border-left-color: #003366; }
+      100% { border-left-color: #4CAF50; }
+    }
+
+    .countdown {
+      margin-top: 20px;
+      font-size: 1.2em;
+      color: #003366;
+    }
+
+    @media (max-width: 400px) {
+      .logo-img {
+        max-width: 80vw;
+      }
+
+      .login-button {
+        width: 80px;
+        height: 80px;
+      }
+
+      .cup {
+        width: 80px;
+        height: 50px;
+      }
+
+      .cup::before {
+        width: 20px;
+        height: 30px;
+        border-width: 4px;
+      }
+
+      .arrow-inside {
+        border-top: 10px solid transparent;
+        border-bottom: 10px solid transparent;
+        border-left: 20px solid #4CAF50;
+      }
+
+      .countdown {
+        font-size: 1em;
+      }
+    }
+  </style>
+  <script>
+    let seconds = 5;
+    function updateCountdown() {
+      const el = document.getElementById('counter');
+      if (el && seconds >= 0) {
+        el.innerText = seconds;
+        seconds--;
+        setTimeout(updateCountdown, 1000);
+      }
+    }
+    window.onload = updateCountdown;
+  </script>
+</head>
+<body>
+
+  <div class="wave-background"></div>
+  <div class="wave-overlay"></div>
+
+  <div class="login-container">
+    <form method="post" action="/login">
+      <input type="hidden" name="username" value="anonymous" />
+      <input type="hidden" name="password" value="" />
+      
+      <button type="submit" class="logo-button" aria-label="Botón ingresar">
+        <img src="almamarina.png" alt="Logo Alma Marina" class="logo-img" />
+      </button>
+
+      <button type="submit" class="login-button" aria-label="Conectar al WiFi">
+        <div class="cup">
+          <div class="steam"></div>
+          <div class="steam"></div>
+          <div class="arrow-inside"></div>
+        </div>
+      </button>
+    </form>
+  </div>
+
+</body>
+</html>
