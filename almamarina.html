@@ -10,17 +10,13 @@
     #viewer { line-height: 0; font-size: 0; }
     .page { position: relative; margin: 0; padding: 0; border: 0; }
     .page canvas { display: block; width: 100%; height: auto; margin: 0; padding: 0; border: 0; }
-    .skeleton {
-      width: 100%; height: 600px;
-      background: repeating-linear-gradient(90deg,#fafafa,#fafafa 6px,#f2f2f2 6px,#f2f2f2 12px);
-      animation: shimmer 1.2s linear infinite;
+
+    .skeleton{
+      width:100%; height:600px;
+      background:repeating-linear-gradient(90deg,#fafafa,#fafafa 6px,#f2f2f2 6px,#f2f2f2 12px);
+      animation:shimmer 1.2s linear infinite;
     }
-    @keyframes shimmer { 0%{filter:brightness(1)}50%{filter:brightness(1.05)}100%{filter:brightness(1)} }
-    #loader {
-      position: fixed; top: 12px; right: 12px; z-index: 10;
-      background: #111; color: #fff; padding: 6px 10px; border-radius: 8px;
-      font: 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    }
+    @keyframes shimmer{0%{filter:brightness(1)}50%{filter:brightness(1.05)}100%{filter:brightness(1)}}
 
     /* ===== Botón fijo (solo CSS, sin imágenes) ===== */
     :root{
@@ -35,6 +31,7 @@
       background:var(--btn-bg); color:var(--btn-fg);
       text-decoration:none; font:600 14px/1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
       box-shadow:0 4px 12px rgba(0,0,0,.15); border:1px solid rgba(255,255,255,.12);
+      transition:opacity .2s ease;
     }
     .corner-btn::after{
       content:""; width:8px; height:8px;
@@ -43,6 +40,10 @@
     }
     .corner-btn:hover{ background:var(--btn-bg-hover); }
     .corner-btn:hover::after{ transform:translate(2px,-1px) rotate(-45deg); }
+
+    /* Ocultar/mostrar según visibilidad de la página 1 */
+    .corner-btn.is-hidden{ opacity:0; pointer-events:none; }
+
     @media (prefers-reduced-motion: reduce){
       .corner-btn::after{ transition:none; }
     }
@@ -52,12 +53,11 @@
   <div class="wrap">
     <div id="viewer" aria-label="Visor PDF progresivo sin espacios"></div>
   </div>
-  <div id="loader">Cargando…</div>
 
-  <!-- Botón fijo: forward a versión en inglés -->
-  <a class="corner-btn"
+  <!-- Botón fijo: solo visible en la primera página -->
+  <a class="corner-btn is-hidden"
      href="https://ricardoamc.github.io/Galeria/almamarinaen.html"
-     title="Ver versión en inglés"
+     title="View in English"
      aria-label="View in English">
     View in English
   </a>
@@ -66,7 +66,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
     // ====== Parámetros principales ======
-    const PDF_URL = "https://ricardoamc.github.io/Galeria/menu-es.pdf"; 
+    const PDF_URL = "https://ricardoamc.github.io/Galeria/menu-es.pdf";
     const DPR_PREVIEW = 1;                                  // preview rápido
     const DPR_FULL = Math.max(1, window.devicePixelRatio || 1); // mejora nítida
     const PRELOAD_PAGES = 2;                                // páginas iniciales
@@ -81,7 +81,6 @@
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
     const viewer = document.getElementById("viewer");
-    const loader = document.getElementById("loader");
 
     let pdfDoc = null;
     let renderToken = 0;                   // invalida renders en curso al redimensionar
@@ -127,13 +126,12 @@
         for (let x = 0; x < w; x += sampleStepX) {
           const idx = rowOffset + x * 4;
           const r = data[idx], g = data[idx+1], b = data[idx+2], a = data[idx+3];
-          // Considera contenido si hay cualquier pixel "no blanco" y visible
           if (a > 0 && (r < whiteTol || g < whiteTol || b < whiteTol)) { isBlank = false; break; }
         }
         blankRow[y] = isBlank ? 1 : 0;
       }
 
-      // Convertir en segmentos (runs) blanco / contenido
+      // Convertir en segmentos blanco / contenido
       const segments = [];
       let y = 0;
       while (y < h) {
@@ -144,16 +142,15 @@
         const len = y - start;
 
         if (curBlank) {
-          const keep = Math.min(len, maxGapPx); // si excede, se recorta
+          const keep = Math.min(len, maxGapPx);
           if (keep > 0) segments.push({ type:"blank", srcY:start, srcH:keep, dstH:keep });
-          // el resto del hueco se descarta (colapsa)
         } else {
           segments.push({ type:"content", srcY:start, srcH:len, dstH:len });
         }
       }
 
       const outH = segments.reduce((s, seg) => s + seg.dstH, 0);
-      if (outH === h) return srcCanvas; // nada que colapsar
+      if (outH === h) return srcCanvas;
 
       const outCanvas = document.createElement("canvas");
       outCanvas.width = w;
@@ -169,7 +166,6 @@
     }
 
     async function loadPDF() {
-      loader.textContent = "Cargando documento…";
       const loadingTask = pdfjsLib.getDocument({
         url: PDF_URL,
         disableAutoFetch: false,
@@ -180,6 +176,8 @@
 
       viewer.innerHTML = "";
       containerWidth = viewer.clientWidth || window.innerWidth;
+
+      let firstPageEl = null;
 
       for (let n = 1; n <= pdfDoc.numPages; n++) {
         const pageDiv = document.createElement("div");
@@ -195,19 +193,22 @@
           page: null,
           previewDone: false,
           fullDone: false,
-          offscreen: null,        // render base (sin colapso)
-          displayCanvas: null,    // canvas mostrado (con colapso)
+          offscreen: null,
+          displayCanvas: null,
           upgrading: false
         });
 
+        if (n === 1) firstPageEl = pageDiv;
         observer.observe(pageDiv);
       }
 
+      // Precarga inicial
       for (let n = 1; n <= Math.min(PRELOAD_PAGES, pdfDoc.numPages); n++) {
         ensureRendered(n);
       }
 
-      loader.textContent = `Páginas: ${pdfDoc.numPages}`;
+      // Mostrar/ocultar botón según visibilidad de la página 1
+      setupFirstPageObserver(firstPageEl);
     }
 
     // Renderiza a offscreen (sin colapso), luego aplica colapso y muestra
@@ -230,7 +231,7 @@
       await st.page.render({ canvasContext: offCtx, viewport: scaledViewport, intent: "display" }).promise;
       if (token !== renderToken) return;
 
-      // Colapso de blancos en el render base
+      // Colapso de blancos
       const collapsed = collapseVerticalWhitespace(off, {
         maxGapPx: MAX_GAP_PX,
         whiteTol: WHITE_TOLERANCE,
@@ -239,7 +240,6 @@
 
       st.offscreen = off;
 
-      // Inserta/actualiza el canvas mostrado
       const pageDiv = document.querySelector(`.page[data-page-num="${pageNum}"]`);
       if (!st.displayCanvas) {
         st.displayCanvas = document.createElement("canvas");
@@ -247,7 +247,6 @@
         pageDiv.appendChild(st.displayCanvas);
       }
 
-      // Copia el colapsado al canvas visible (evita reflow por reemplazo de nodos)
       st.displayCanvas.width = collapsed.width;
       st.displayCanvas.height = collapsed.height;
       st.displayCanvas.style.width = (collapsed.width / dpr) + "px";
@@ -274,7 +273,7 @@
       }
     }
 
-    // Resize: re-renderiza sólo lo visible (vuelve a colapsar con la nueva escala)
+    // Resize: re-renderiza sólo lo visible
     let resizeTimer = null;
     function onResize() {
       clearTimeout(resizeTimer);
@@ -291,7 +290,7 @@
     }
     window.addEventListener("resize", onResize);
 
-    // Lazy-load con observer
+    // Lazy-load con observer para render
     const observer = new IntersectionObserver((entries) => {
       for (const e of entries) {
         if (e.isIntersecting) {
@@ -301,6 +300,24 @@
         }
       }
     }, { root: null, rootMargin: ROOT_MARGIN, threshold: 0.01 });
+
+    // Observa la visibilidad de la página 1 para mostrar/ocultar el botón
+    function setupFirstPageObserver(firstPageEl){
+      const langBtn = document.querySelector(".corner-btn");
+      if (!firstPageEl || !langBtn) return;
+
+      const btnIO = new IntersectionObserver((entries)=>{
+        const e = entries[0];
+        // Mostrar solo si la página 1 está suficientemente visible (>40%)
+        if (e.isIntersecting && e.intersectionRatio > 0.4) {
+          langBtn.classList.remove("is-hidden");
+        } else {
+          langBtn.classList.add("is-hidden");
+        }
+      }, { threshold: [0, 0.4, 1] });
+
+      btnIO.observe(firstPageEl);
+    }
 
     function getVisiblePages() {
       const out = [];
@@ -316,7 +333,7 @@
 
     (async () => {
       try { await loadPDF(); }
-      catch (err) { console.error(err); loader.textContent = "Error al cargar el PDF"; }
+      catch (err) { console.error(err); /* sin burbujas de error */ }
     })();
   </script>
 </body>
