@@ -2,15 +2,85 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <link rel="dns-prefetch" href="https://almamarina-pa.github.io">
-  <link rel="preconnect" href="https://almamarina-pa.github.io" crossorigin>
-  <title>Vamos al menu…</title>
-  <script>
-    location.replace("https://almamarina-pa.github.io/galeria/almamarina.html");
-  </script>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Redirigiendo…</title>
   <noscript>
     <meta http-equiv="refresh" content="0;url=https://almamarina-pa.github.io/galeria/almamarina.html">
   </noscript>
+
+  <style>
+    html,body{height:100%;margin:0}
+    body{background:#efefef;display:grid;place-items:center;overflow:hidden}
+    canvas{width:100vw;height:100vh;display:block;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.08) inset}
+    @media (prefers-reduced-motion: reduce){
+      canvas{animation:none}
+    }
+  </style>
 </head>
-<body></body>
+<body>
+  <canvas id="c" aria-label="Animación de círculos"></canvas>
+
+  <script>
+  (function () {
+    const URL = "https://almamarina-pa.github.io/galeria/almamarina.html";
+    const canvas = document.getElementById('c');
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const ctx = canvas.getContext('2d');
+
+    function resize(){
+      canvas.width  = Math.floor(innerWidth  * dpr);
+      canvas.height = Math.floor(innerHeight * dpr);
+    }
+    addEventListener('resize', resize, {passive:true}); resize();
+    const COLORS = ["#a8cfc8","#f5d6a5","#f4a0a3","#ffc055","#f6f0ca","#f2b2b6","#7fb3ad"];
+    const N = Math.min(30, Math.max(14, Math.floor(Math.hypot(innerWidth,innerHeight)/60)));
+
+    const circles = Array.from({length:N}, () => {
+      const r = rand(innerWidth*0.03, innerWidth*0.12);
+      const speed = rand(0.15, 0.45) * dpr; // px/frame @60fps aprox
+      const ang = Math.random()*Math.PI*2;
+      return {
+        x: rand(r, innerWidth - r) * dpr,
+        y: rand(r, innerHeight - r) * dpr,
+        r: r * dpr,
+        vx: Math.cos(ang)*speed,
+        vy: Math.sin(ang)*speed,
+        c: COLORS[(Math.random()*COLORS.length)|0],
+        a: rand(0.65, 0.95)
+      };
+    });
+
+    function rand(a,b){ return a + Math.random()*(b-a); }
+
+    let reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function step(){
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0,0,w,h);
+      for (const p of circles){
+        if(!reduceMotion){
+          p.x += p.vx; p.y += p.vy;
+          if(p.x < p.r || p.x > w - p.r) p.vx *= -1;
+          if(p.y < p.r || p.y > h - p.r) p.vy *= -1;
+        }
+        ctx.globalAlpha = p.a;
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+      if(!reduceMotion) requestAnimationFrame(step);
+    }
+
+    step();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => location.replace(URL));
+    });
+    setTimeout(() => { try { location.replace(URL); } catch(e) { location.href = URL; } }, 900);
+  })();
+  </script>
+</body>
 </html>
+
